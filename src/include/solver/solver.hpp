@@ -7,9 +7,6 @@
 
 #include <solver/differentiate.hpp>
 
-using std::cout;
-using std::endl;
-
 namespace solver { 
     //
 // Solver for N equations using a real type R
