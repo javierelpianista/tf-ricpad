@@ -10,7 +10,6 @@ This program is intended to be run on GNU/Linux systes. It uses the following li
 
 * `Boost::multiprecision` (header only, included with regular Boost)
 * `Boost::program_options` (compiled library, some distros require separate installation)
-* `Eigen3`
 * `GMP`
 * `MPFR`
 
