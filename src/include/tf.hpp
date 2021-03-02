@@ -6,7 +6,6 @@
 
 namespace mp = boost::multiprecision;
 using mp::mpfr_float;
-using mp::mpc_complex;
 
 template <typename num_t>
 std::vector<num_t> coefs_strong(int N, num_t f2) {
