@@ -39,13 +39,6 @@ if ( Boost_FOUND )
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
-#-------------------------------------------------------------------------------
-# Eigen
-find_package(Eigen3 REQUIRED)
-if ( NOT EIGEN3_FOUND ) 
-    message("Eigen3 not found. Maybe set EIGEN3_INCLUDE_DIR?")
-endif()
-
 #------------------------------------------------------------------------------
 # Executable
 add_executable(tf-ricpad src/main.cpp)
@@ -54,7 +47,6 @@ target_link_libraries(
     tf-ricpad PUBLIC
     gmp
     mpfr
-    Eigen3::Eigen
     Boost::boost
     Boost::program_options
     )

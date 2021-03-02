@@ -2,8 +2,11 @@
 #define SOLVER
 
 #include <iostream>
+#include <vector>
 #include <stdexcept>
 #include <math.h>
+
+#include <Eigen/Dense>
 
 #include <solver/differentiate.hpp>
 
@@ -15,12 +18,13 @@ namespace solver {
 // Solver for N equations using a real type R
 template <
     typename C, // complex number type
-    typename R  // real number type (for tolerance parameters, etc.)
+    typename R, // real number type (for tolerance parameters, etc.)
+    int N       // number of equations and unknowns
 >
 class Solver {
     private:
-        // Function to solve
-        const std::function<C(C&)> f_;
+        // Vector with the functions
+        const std::vector<std::function<C(Eigen::Matrix<C,N,1>&)>> f_;
         //Eigen::Matrix<C,N,1> x0;
         // Accepted difference between two iterations
         R tol_; 
@@ -37,7 +41,9 @@ class Solver {
         //----------------------------------------------------------------------
         // Construct a Solver object from a vector of functions. 
         // Differentiation is performed numerically.
-        Solver(const std::function<C(C&)> &f) :
+        Solver(
+            const std::vector<std::function<C(Eigen::Matrix<C,N,1>&)>> &f
+            ) :
             
             f_(f) {
                 //h_   = std::sqrt(std::numeric_limits<R>::epsilon());
@@ -64,12 +70,14 @@ class Solver {
 
         //----------------------------------------------------------------------
         // Solve for f using x0 as initial value
-        C solve(C x0) 
+        Eigen::Matrix<C,N,1> solve(
+            Eigen::Matrix<C,N,1> x0
+            ) 
         {
 
             using solver::differentiate;
-            C jacobian, inv_jacobian;
-            C x(x0), xold;
+            Eigen::Matrix<C, N, N> jacobian, inv_jacobian;
+            Eigen::Matrix<C, N, 1> x(x0), xold;
             R desv = tol_ + 1;
 
             int niter = 0;
@@ -77,26 +85,32 @@ class Solver {
             C val;
 
             while ( desv > tol_ ) {
-                val = differentiate<C>(f_, x, h_);
-                jacobian = std::move(val);
+                for ( int i = 0; i < x.size(); i++ ) {
+                    for ( int j = 0; j < x.size(); j++ ) {
+                        val = differentiate<C, N>(f_[i], x, j, h_);
+                        jacobian(i, j) = std::move(val);
+                    }
+                }
 
-                inv_jacobian = 1/jacobian;
+                inv_jacobian = jacobian.inverse();
                 
-                C F;
+                Eigen::Matrix<C, N, 1> F;
 
-                F = f_(x); 
+                for ( int i = 0; i < N; i++ ) F(i) = f_[i](x); 
 
                 xold = x;
                 x = x - inv_jacobian * F;
 
-                desv = abs(x - xold);
+                desv = (x - xold).norm();
 
                 if ( log_iters_ ) {
                     std::cout << std::setw(8) << "( NR: " << niter << " )";
-                    std::cout 
-                        << std::setprecision(log_precision_) 
-                        << std::setw(log_precision_ + 10) << std::left
-                        << x;
+                    for ( int i = 0; i < N; i++ ) {
+                        std::cout 
+                            << std::setprecision(log_precision_) 
+                            << std::setw(log_precision_ + 10) << std::left
+                            << x(i);
+                    }
                     std::cout << std::endl;
                 }
 
@@ -112,6 +126,12 @@ class Solver {
             return x;
         };
 
+        /* Construct a Solver object from a function and its derivative
+        Solver(
+            const std::function<R(R)> f,
+            const std::function<R(R)> df
+            )
+        */
 };
 
 }; // namespace solver

@@ -2,7 +2,10 @@
 #include <functional>
 #include <algorithm>
 
+#include <Eigen/Dense>
+
 #include <boost/multiprecision/mpfr.hpp>
+#include <boost/multiprecision/mpc.hpp>
 #include <boost/program_options.hpp>
 
 #include <ricpad/hankdet.hpp>
@@ -11,7 +14,7 @@
 
 namespace mp = boost::multiprecision;
 using mp::mpfr_float;
-using mp::mpfr_float;
+using mp::mpc_complex;
 
 namespace po = boost::program_options;
 
@@ -67,6 +70,8 @@ int main(int argc, char* argv[]) {
         ("strong-field", po::bool_switch(),
          "Solve the Thomas-Fermi equation for atoms in a strong magnetic field"
          " instead")
+        ("use-complex", po::bool_switch()->default_value(false),
+         "Use complex numbers")
         ;
 
     opts./*add(mandatory).*/add(optional).add(hidden);
@@ -101,7 +106,6 @@ int main(int argc, char* argv[]) {
 
     // Number of digits for numerical computations
     int ndigits = vm["ndigits"].as<int>();
-    mpfr_float::default_precision(ndigits);
     mpfr_float::default_precision(ndigits);
 
     // Tolerance for the Newton-Raphson method
@@ -139,34 +143,40 @@ int main(int argc, char* argv[]) {
     }
 
     // Initial x0 value
-    mpfr_float x0;
-    x0 = mpfr_float(vm["x0"].as<std::string>());
+    Eigen::Matrix<mpfr_float,1,1> x0;
+    x0(0) = mpfr_float(vm["x0"].as<std::string>());
 
     int D;
 
     // Define the lambda function for the Hankel determinants
-    std::function<mpfr_float(mpfr_float&)> f;
+    std::function<
+        mpfr_float(Eigen::Matrix<mpfr_float, 1, 1>&)
+        > f;
+    std::vector<mpfr_float> v;
 
     if ( vm["strong-field"].as<bool>() ) {
-        f = [&D, &d] ( mpfr_float &x ) -> mpfr_float {
+        f = [&D, &d] ( Eigen::Matrix<mpfr_float,1,1> &x ) -> mpfr_float {
             std::vector<mpfr_float> v;
 
-            v = coefs_strong<mpfr_float>(2*D+d, x);
+            v = coefs_strong<mpfr_float>(2*D+d, x(0));
             v.erase(v.begin(), v.begin()+d+1);
             return ricpad::hankdet::hankdet<mpfr_float>(D, v);
         };
     } else {
-        f = [&D, &d] ( mpfr_float &x ) -> mpfr_float {
+        f = [&D, &d] ( Eigen::Matrix<mpfr_float,1,1> &x ) -> mpfr_float {
             std::vector<mpfr_float> v;
 
-            v = coefs<mpfr_float>(2*D+d, x);
+            v = coefs<mpfr_float>(2*D+d, x(0));
             v.erase(v.begin(), v.begin()+d+1);
             return ricpad::hankdet::hankdet<mpfr_float>(D, v);
         };
     }
 
+    std::vector<decltype(f)> vf;
+    vf.push_back(f);
+
     // Here we define the Solver object that will solve the H[D,d] = 0 equation.
-    solver::Solver<mpfr_float, mpfr_float> s(f);
+    solver::Solver<mpfr_float, mpfr_float, 1> s(vf);
     s.set_tol(tol);
     s.set_h(h);
     s.set_maxiter(maxiter);
@@ -175,14 +185,14 @@ int main(int argc, char* argv[]) {
     // Here starts the actual computation
     // ------------------------------------------------------------------------
 
-    mpfr_float x, xtry, xold;
+    Eigen::Matrix<mpfr_float,1,1> x, xtry, xold;
     x = x0/2;
     mpfr_float dE;
 
     int nfailed = 0;
 
     for ( D = Dmin; Dmax < 0 || D<=Dmax ; D = D + Dstep ) {
-        mpfr_float ans;
+        Eigen::Matrix<mpfr_float,1,1> ans;
 
         if ( vm["log-nr"].as<bool>() ) {
             s.set_log(ndigits);
@@ -193,7 +203,7 @@ int main(int argc, char* argv[]) {
             xold = x;
             x = xtry;
 
-            dE = abs(x - xold);
+            dE = abs(x(0) - xold(0));
 
             if ( ! vm["no-auto-precision"].as<bool>() ) {
                 int curr_ndigits = -int(floor(log10(dE)));
@@ -206,7 +216,7 @@ int main(int argc, char* argv[]) {
             std::cout 
                 << "D = " << std::setw(3) << D 
                 << " " << std::setw(ndigits+5) 
-                       << std::setprecision(ndigits) << std::left << 2*x 
+                       << std::setprecision(ndigits) << std::left << 2*x(0,0) 
                 << " " << std::setw(10) << std::setprecision(4) << dE
                 << " digits: " << ndigits 
                 << " tol: " << tol 
@@ -223,13 +233,12 @@ int main(int argc, char* argv[]) {
         } catch ( const std::runtime_error& e ) {
             nfailed += 1;
             std::cout 
-                << "Newton-Raphson failed after " << s.maxiter() 
-                << " iterations for D = " << D << "." << std::endl;
-
+                << "Newton-Raphson failed after " 
+                << maxiter << " iterations for D = " << D << "." << std::endl;
             if ( nfailed >= 3 ) {
                 throw std::runtime_error(
                     "The Newton-Raphson method failed to converge for " + 
-                    std::to_string(nfailed) + " consecutive D values. "
+                    std::to_string(nfailed) + "consecutive D values. "
                     );
             }
         }
