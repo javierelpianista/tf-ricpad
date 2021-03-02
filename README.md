@@ -1,18 +1,20 @@
 # tf-ricpad
 
-A tool for solving the Thomas-Fermi equations using the Hankel-Padé method
+A tool for solving the Thomas-Fermi equations using the Hankel-Padé method.
 
 # Installation 
 
 ## Requirements
 
-This program uses the following libraries:
-* boost
-* Eigen
-* GMP
-* MPFR
+This program is intended to be run on GNU/Linux systes. It uses the following libraries:
 
-Additionally, it requires cmake for installation
+* `Boost::multiprecision` (header only, included with regular Boost)
+* `Boost::program_options` (compiled library, some distros require separate installation)
+* `Eigen3`
+* `GMP`
+* `MPFR`
+
+Additionally, it requires cmake for installation.
 
 ## Instructions
 

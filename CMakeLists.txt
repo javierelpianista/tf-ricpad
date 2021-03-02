@@ -47,10 +47,6 @@ if ( NOT EIGEN3_FOUND )
 endif()
 
 #------------------------------------------------------------------------------
-# ricpad directory 
-add_subdirectory(ricpad) 
-
-#------------------------------------------------------------------------------
 # Executable
 add_executable(tf-ricpad src/main.cpp)
 include_directories(src/include)
@@ -61,5 +57,4 @@ target_link_libraries(
     Eigen3::Eigen
     Boost::boost
     Boost::program_options
-    ricpad 
     )
