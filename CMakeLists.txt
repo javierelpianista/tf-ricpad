@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # GMP, MPFR, MPC
 find_library(gmp "gmp")
-foreach(lib gmp mpfr mpc ginac cln)
+foreach(lib gmp mpfr)
     find_library("${lib}" "${lib}")
     if ( ${${lib}} STREQUAL "${lib}-NOTFOUND" ) 
         message( FATAL_ERROR 
