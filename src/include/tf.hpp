@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <boost/multiprecision/mpfr.hpp>
-#include <boost/multiprecision/mpc.hpp>
 
 namespace mp = boost::multiprecision;
 using mp::mpfr_float;
